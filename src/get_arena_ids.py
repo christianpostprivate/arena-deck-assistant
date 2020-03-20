@@ -1,5 +1,6 @@
 import json
-from os import path
+from os import path, listdir
+import re
 
 # grpid = Arena card id
 # titleId = localisation id
@@ -62,7 +63,16 @@ def get_ids_from_name(data_cards_file, data_loc_file):
     return card_name_by_id
 
 
-def collect_arena_ids(data_cards_file, data_loc_file):
+def collect_arena_ids(arena_directory):
+    arena_directory += '\MTGA_Data\Downloads\Data'
+    files = listdir(arena_directory)
+    r_cards = re.compile(r'^data_cards.*.mtga$')
+    r_loc = re.compile(r'^data_loc.*.mtga$')
+    data_cards_file = (arena_directory + '\\' +
+                       list(filter(r_cards.match, files))[0])
+    data_loc_file = (arena_directory + '\\' +
+                     list(filter(r_loc.match, files))[0])
+
     d = get_names_from_id(data_cards_file, data_loc_file)
     with open(path.join(data_folder, 'card_id_by_name.json'), 'w',
               encoding='utf-8') as f:
@@ -75,9 +85,17 @@ def collect_arena_ids(data_cards_file, data_loc_file):
 
 
 if __name__ == '__main__':
-    DATA_CARDS_FILE = 'C:\Program Files (x86)\Wizards of the Coast\MTGA\MTGA_Data\Downloads\Data\data_cards_296741a1382e4e59c7e0e658f9ff376c.mtga'
-    DATA_LOC_FILE = 'C:\Program Files (x86)\Wizards of the Coast\MTGA\MTGA_Data\Downloads\Data\data_loc_c9f4f3eee920063a46a2d4a42654ab5b.mtga'
+    # for testing
+    ARENA_DIRECTORY = 'C:\Program Files (x86)\Wizards of the Coast\MTGA'
+    ARENA_DIRECTORY += '\MTGA_Data\Downloads\Data'
 
+    files = listdir(ARENA_DIRECTORY)
+
+    r_cards = re.compile(r'^data_cards.*.mtga$')
+    r_loc = re.compile(r'^data_loc.*.mtga$')
+
+    DATA_CARDS_FILE = ARENA_DIRECTORY + '\\' + list(filter(r_cards.match, files))[0]
+    DATA_LOC_FILE = ARENA_DIRECTORY + '\\' + list(filter(r_loc.match, files))[0]
     d = get_names_from_id(DATA_CARDS_FILE, DATA_LOC_FILE)
     with open(path.join(data_folder, 'card_id_by_name.json'), 'w', encoding='utf-8') as f:
         json.dump(d, f)
