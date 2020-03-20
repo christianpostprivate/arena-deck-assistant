@@ -7,12 +7,11 @@ from get_arena_ids import collect_arena_ids
 username = os.environ['USERPROFILE']
 
 OUTPUT_LOG = f'{username}\AppData\LocalLow\Wizards Of The Coast\MTGA\output_log.txt'
-
-DATA_CARDS_FILE = 'C:\Program Files (x86)\Wizards of the Coast\MTGA\MTGA_Data\Downloads\Data\data_cards_296741a1382e4e59c7e0e658f9ff376c.mtga'
-DATA_LOC_FILE = 'C:\Program Files (x86)\Wizards of the Coast\MTGA\MTGA_Data\Downloads\Data\data_loc_c9f4f3eee920063a46a2d4a42654ab5b.mtga'
+ARENA_DIRECTORY = 'C:\Program Files (x86)\Wizards of the Coast\MTGA'
 
 # get the card name and ID data from the arena files
-collect_arena_ids(DATA_CARDS_FILE, DATA_LOC_FILE)
+#collect_arena_ids(DATA_CARDS_FILE, DATA_LOC_FILE)
+collect_arena_ids(ARENA_DIRECTORY)
 
 # specify a list of formats
 FORMATS = ['Standard', ]
