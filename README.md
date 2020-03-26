@@ -25,7 +25,7 @@
 1) Run **src/run_gui.py** with Python. Make sure that the required modules are installed in your environment.
 2) The remaining process is the same as described under "Windows executable".
 
-### Without PySimpleGUI
+#### Without PySimpleGUI
 1) If your Arena client is located in a different directory than `C:\Program Files (x86)\Wizards of the Coast\MTGA`, you have to open **data/settings.json** in a text editor and edit the value for `ARENA_DIRECTORY` to match the location on your PC.
 2) The default list for formats contains only Standard. If you want additional formats (currently Historic and Brawl) you have to add them to the list `FORMATS`.
 3) The `UPDATE_DECKLISTS` function needs to run once to request the current top decks from mtggoldfish.com. They are saved as txt files in the data/decks folder. For a re-run you can set this value to `false`to save time. 
