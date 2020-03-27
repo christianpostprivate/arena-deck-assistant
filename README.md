@@ -13,7 +13,7 @@
 1) Enable "Detailed Logs" in MtG Arena and restart the Client: [Official How To](https://mtgarena-support.wizards.com/hc/en-us/articles/360000726823-Creating-Log-Files)
 
 ### Windows executable
-1) A windows executable is located under `dist/src/arena-deck-assistant.exe`.
+1) A windows executable is found in `arena-deck-assistant-Windows` under `src\arena-deck-assistant.exe`.
 2) Make sure the paths for the `Wizards of the Coast\MTGA` folder and the `output_log.txt` file match the paths on your PC. If not, use the `Browse` button to select them via the file explorer.
 3) Select at least one format.
 4) Check the `Update downloaded decks?`to request the current top decks from mtggoldfish.com. They are saved as txt files in the data/decks folder. For a re-run you can leave this box unchecked to save time.
