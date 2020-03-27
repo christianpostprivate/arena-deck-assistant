@@ -114,7 +114,7 @@ def make_deck_from_url(session, deck_url, deck_name=None,
         return Deck(response.text)
 
 
-def update_decklists(*formats):
+def update_decklists(formats, max_number=50, app=None):
     decklists_folder = path.join(base_dir, '..', 'data', 'decks')
     if not path.isdir(decklists_folder):
         mkdir(decklists_folder)
@@ -140,7 +140,9 @@ def update_decklists(*formats):
                 print((f'No response from {goldfish_url} ' +
                       f'(Status code {response.status_code})'))
 
-            for url in tierdeck_urls[:50]:
+            for url in tierdeck_urls[:max_number]:
+                if app and not app.running:
+                    return
                 response = s.get(url)
                 if response.status_code == 200:
                     raw_html = BeautifulSoup(response.content, 'html.parser')

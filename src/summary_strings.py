@@ -10,7 +10,7 @@ Wild card inventory:
   Rare: {4}
   Mythic: {5}
 
-Decks ranked by the number of cards missing (lowest to highest):
+Decks ranked by # of Mythic and Rare wild cards missing:
 """
 
 
@@ -22,6 +22,7 @@ DECK_STRING = """
   {3} / {4}
   Additional wild cards needed:
   {5} M, {6} R, {7} UC, {8} C
+  
   Cards needed:
 """
 

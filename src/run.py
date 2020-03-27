@@ -13,7 +13,7 @@ with open(path.join(data_folder, 'settings.json'), 'r') as f:
 
 username = environ['USERPROFILE']
 
-OUTPUT_LOG = f'{username}\AppData\LocalLow\Wizards Of The Coast\MTGA\output_log.txt'
+OUTPUT_LOG = f'{username}\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt'
 
 # get the card name and ID data from the arena files
 collect_arena_ids(settings['ARENA_DIRECTORY'])

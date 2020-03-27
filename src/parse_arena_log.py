@@ -54,15 +54,21 @@ def filter_cardlist(cardlist, formats):
     return filtered_cards
 
 
-def analyse_and_summary(output_log, formats):
+def analyse_and_summary(output_log, formats, app=None):
     # parse the MtG Arena log file
     log = parse_logfile(output_log)
     # card pool data
-    card_inventory_log_data = log['PlayerInventory.GetPlayerCardsV3'][
-        'payload']
-    # wild cards, gold, gems etc
-    inventory_log_data = log['PlayerInventory.GetPlayerInventory']['payload']
-
+    try:
+        card_inventory_log_data = log['PlayerInventory.GetPlayerCardsV3'][
+            'payload']
+        # wild cards, gold, gems etc
+        inventory_log_data = log['PlayerInventory.GetPlayerInventory'][
+            'payload']
+    except KeyError:
+        return ('Failed to read data from output log. Make sure ' +
+                'detailed logging in the MtG Arena client is active.\n' +
+                'For instructions see:\n' +
+                'https://mtgarena-support.wizards.com/hc/en-us/articles/360000726823-Creating-Log-Files')
     # make API call to scryfall to get the current legal cardpool
     data_folder = path.join(base_dir, '..', 'data')
     cardbase = path.join(data_folder, 'arena_legal_cards.json')
@@ -70,15 +76,18 @@ def analyse_and_summary(output_log, formats):
         with Session() as s:
             scryfall_url = ('https://api.scryfall.com/cards/search?q=' +
                             'legal:historic')
-            print('Getting card data from scryfall.com')
+            print('Requesting card data from scryfall.com')
             done = False
             page = 1
             card_data = []
             while not done:
+                if app and not app.running:
+                    return
                 response = s.get(scryfall_url)
                 if response.status_code == 200:
-                    print(f'reading page {page}')
                     data = json.loads(response.text)
+                    total_pages = data['total_cards'] // len(data['data']) + 1
+                    print(f'reading page {page} of {total_pages}')
                     card_data += data['data']
                     if data['has_more']:
                         scryfall_url = data['next_page']
@@ -141,6 +150,8 @@ def analyse_and_summary(output_log, formats):
             card = Card(c_name, quantity, cdata)
 
     cardpool.to_file(path.join(data_folder, 'arena_cardpool.txt'))
+
+    total_output = ''
 
     for form in formats:
         # look for decklists in folders
@@ -212,7 +223,10 @@ def analyse_and_summary(output_log, formats):
                     cards_needed
                 ])
 
-            results = sorted(results, key=lambda x: x[3], reverse=True)
+            # sort the results (by number of mythic and rare WC needed)
+            results = sorted(results,
+                             key=lambda x: x[5] + x[6],
+                             reverse=False)
             for i, r in enumerate(results):
                 r[0] = i + 1
                 output += DECK_STRING.format(*r)
@@ -220,7 +234,6 @@ def analyse_and_summary(output_log, formats):
                     output += f'   {card}\n'
                 output += '\n'
 
-            print(output)
             output_folder = path.join(base_dir, '..', 'summary')
             if not path.isdir(output_folder):
                 mkdir(output_folder)
@@ -229,6 +242,10 @@ def analyse_and_summary(output_log, formats):
                 f.write(output)
 
             print(f'Summary for {form} saved as summary\summary_{form}.txt')
+
+            total_output += output
+
+    return total_output
 
 if __name__ == '__main__':
     analyse_and_summary()
