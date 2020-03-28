@@ -2,5 +2,6 @@
   "ARENA_DIRECTORY": "C:\\Program Files (x86)\\Wizards of the Coast\\MTGA",
   "FORMATS": ["Standard"],
   "UPDATE_DECKLISTS": true,
-  "DECKLIST_MAX_NUMBER": 100
+  "DECKLIST_MAX_NUMBER": 100,
+  "DOWNLOAD_DELAY": 0.5
 }

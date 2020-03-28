@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-
 from bs4 import BeautifulSoup
 from requests import Session
-
-from random import random
 import re
-
+import logging
 from time import sleep
-from os import path, mkdir
+from os import path, mkdir, listdir, remove
+import threading
 
 
 base_dir = path.dirname(path.abspath(__file__))
@@ -16,15 +14,32 @@ data_folder = path.join(base_dir, '..', 'data')
 if not path.isdir(data_folder):
     mkdir(data_folder)
 
+RARITY_CODES = {
+    'Mythic': 1,
+    'Rare': 2,
+    'Uncommon': 3,
+    'Common': 4,
+    'Basic': 5,
+    'Token': 6
+}
+
 
 class Card:
     def __init__(self, cardname, quantity, data=None):
         self.name = cardname
         self.quantity = int(quantity)
-        self.data = data
+        if data:
+            self.data = data
+        else:
+            self.data = {}
+        self.rarity = self.data.get('rarity', None)
+        self.rarity_code = RARITY_CODES.get(self.rarity, 7)
 
     def __repr__(self):
-        return f'{self.quantity} {self.name}'
+        if self.rarity:
+            return f'{self.quantity} {self.name} ({self.rarity})'
+        else:
+            return f'{self.quantity} {self.name}'
 
 
 class Deck:
@@ -110,11 +125,12 @@ def make_deck_from_url(session, deck_url, deck_name=None,
             filename = f'deck_{deck_url.split("/")[-1]}.txt'
         with open(path.join(folder, filename), 'wb') as f:
             f.write(response.content)
+    else:
+        logging.error(f'Download of {deck_url} failed.' +
+                      f'Status code: {response.status_code}')
 
-        return Deck(response.text)
 
-
-def update_decklists(formats, max_number=50, app=None):
+def update_decklists(formats, max_number=50, delay=1, app=None):
     decklists_folder = path.join(base_dir, '..', 'data', 'decks')
     if not path.isdir(decklists_folder):
         mkdir(decklists_folder)
@@ -129,6 +145,10 @@ def update_decklists(formats, max_number=50, app=None):
                 format_folder = path.join(decklists_folder, form)
                 if not path.isdir(format_folder):
                     mkdir(format_folder)
+                else:
+                    # delete all files in that folder
+                    for filename in listdir(format_folder):
+                        remove(path.join(format_folder, filename))
 
                 raw_html = BeautifulSoup(response.content, 'html.parser')
                 url_tags = raw_html.find_all('a',
@@ -137,8 +157,8 @@ def update_decklists(formats, max_number=50, app=None):
                                  for tag in url_tags]
 
             else:
-                print((f'No response from {goldfish_url} ' +
-                      f'(Status code {response.status_code})'))
+                logging.error((f'No response from {goldfish_url} ' +
+                               f'(Status code {response.status_code})'))
 
             for url in tierdeck_urls[:max_number]:
                 if app and not app.running:
@@ -155,11 +175,15 @@ def update_decklists(formats, max_number=50, app=None):
                     if download_link:
                         deck_url = ('https://www.mtggoldfish.com' +
                                     download_link['href'])
-                        make_deck_from_url(s, deck_url, deck_title,
-                                           format_folder)
-                        print(f'Downloading and saving from {deck_url}')
-                sleep(1 + random())
+                        # make_deck_from_url(s, deck_url, deck_title,
+                        #                    format_folder)
+                        t = threading.Thread(target=make_deck_from_url,
+                                             args=[s, deck_url, deck_title,
+                                                   format_folder])
+                        t.start()
+                        logging.info(f'Downloading and saving from {deck_url}')
+                sleep(delay)
 
 
 if __name__ == '__main__':
-    update_decklists('Standard', 'Historic', 'Brawl', 'Test')
+    update_decklists(['Standard'], max_number=16)

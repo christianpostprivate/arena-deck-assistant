@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 import json
 from os import path, listdir
 import re
+import logging
 
 # grpid = Arena card id
 # titleId = localisation id
@@ -15,7 +17,7 @@ RARITIES = {
     2: 'Common',
     3: 'Uncommon',
     4: 'Rare',
-    5: 'Mythic Rare'
+    5: 'Mythic'
 }
 
 
@@ -27,7 +29,7 @@ def get_names_from_id(data_cards_file, data_loc_file):
         with open(data_loc_file, 'r', encoding='utf-8') as f:
             data_loc = json.load(f)
     except FileNotFoundError:
-        print('Can not find card data files.')
+        logging.error('Can not find card data files.')
         return
 
     # connect card id with names
@@ -60,7 +62,7 @@ def get_ids_from_name(data_cards_file, data_loc_file):
         with open(data_loc_file, 'r', encoding='utf-8') as f:
             data_loc = json.load(f)
     except FileNotFoundError:
-        print('Can not find card data files.')
+        logging.error('Can not find card data files.')
         return
 
     card_name_by_title_id = {}
