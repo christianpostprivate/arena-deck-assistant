@@ -7,6 +7,7 @@ a = Analysis(['src\\run.py'],
              pathex=['E:\\Python\\scripts\\arena-deck-assistant'],
              binaries=[],
              datas=[
+				('data', '.'),
 				('src/get_arena_ids.py', '.'),
 				('src/parse_arena_log.py', '.'),
 				('src/scrape_decklists.py', '.'),
@@ -32,7 +33,7 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=True )
+          console=False)
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,

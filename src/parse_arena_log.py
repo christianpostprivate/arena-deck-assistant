@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 from os import path, listdir, mkdir
-from time import sleep
-from requests import Session
 import json
 import re
+import logging
 
 from scrape_decklists import Card, Deck
 from summary_strings import DECKLIST_SUMMARY, DECK_STRING
@@ -45,15 +45,6 @@ def parse_logfile(file):
     return logfile_dict
 
 
-def filter_cardlist(cardlist, formats):
-    filtered_cards = []
-    for card in cardlist:
-        print(card['name'])
-        if any([card['legalities'][f] == 'legal' for f in formats]):
-            filtered_cards.append(card)
-    return filtered_cards
-
-
 def analyse_and_summary(output_log, formats, app=None):
     # parse the MtG Arena log file
     log = parse_logfile(output_log)
@@ -69,90 +60,38 @@ def analyse_and_summary(output_log, formats, app=None):
                 'detailed logging in the MtG Arena client is active.\n' +
                 'For instructions see:\n' +
                 'https://mtgarena-support.wizards.com/hc/en-us/articles/360000726823-Creating-Log-Files')
-    # make API call to scryfall to get the current legal cardpool
-    data_folder = path.join(base_dir, '..', 'data')
-    cardbase = path.join(data_folder, 'arena_legal_cards.json')
-    if not path.exists(cardbase):
-        with Session() as s:
-            scryfall_url = ('https://api.scryfall.com/cards/search?q=' +
-                            'legal:historic')
-            print('Requesting card data from scryfall.com')
-            done = False
-            page = 1
-            card_data = []
-            while not done:
-                if app and not app.running:
-                    return
-                response = s.get(scryfall_url)
-                if response.status_code == 200:
-                    data = json.loads(response.text)
-                    total_pages = data['total_cards'] // len(data['data']) + 1
-                    print(f'reading page {page} of {total_pages}')
-                    card_data += data['data']
-                    if data['has_more']:
-                        scryfall_url = data['next_page']
-                        page += 1
-                    else:
-                        done = True
-                        break
-                else:
-                    done = True
-                    print(f'no response from page {scryfall_url}')
-                sleep(2)
-        with open(cardbase, 'w') as f:
-            json.dump(card_data, f)
-    else:
-        with open(cardbase, 'r') as f:
-            card_data = json.load(f)
 
     # load card data from arena
+    data_folder = path.join(base_dir, '..', 'data')
     with open(path.join(data_folder, 'card_id_by_name.json'), 'r') as f:
         card_ids_by_name = json.load(f)
 
     with open(path.join(data_folder, 'card_name_by_id.json'), 'r') as f:
         card_name_by_id = json.load(f)
 
-    # search for arena IDs of the arena log and make a deck list
-    cardpool = Deck()
-    # make a dictionary with 'card_id': card_data
-    card_data_by_id = {}
-    card_data_by_name = {}
-    # a Deck object with each card's data
-    card_deck = Deck()
-    for card in card_data:
-        if '//' in card['name']:
-            card['name'] = card['name'].split('//')[0].strip()
-        card_data_by_name[card['name']] = card
-        try:
-            card_data_by_id[f'{card["arena_id"]}'] = card
-            card_deck.maindeck.append(Card(card['name'], 1, card))
-        except KeyError:
-            # can't find ID in scryfall data
-            try:
-                arena_ids = card_ids_by_name[card['name']]
-                for id_ in arena_ids:
-                    card_data_by_id[f'{id_}'] = card
-                card_deck.maindeck.append(Card(card['name'], 1, card))
-            except KeyError:
-                print(f'No data for {card["name"]}')
+    arena_legal_cards = Deck()
+    for name, card_data in card_ids_by_name.items():
+        # No Split/adventure card names in decklists
+        if '//' in name:
+            name = name.split('//')[0].strip()
+        card = Card(name, 1, card_data)
+        arena_legal_cards.maindeck.append(card)
+
+    arena_legal_cards.to_file(path.join(data_folder,
+                                        'arena_legal_cards.txt'))
 
     # for each item in the inventory, search with the id for the
     # associated card data
+    cardpool = Deck()
     for card_id, quantity in card_inventory_log_data.items():
-        try:
-            cdata = card_data_by_id[card_id]
-            card = Card(cdata['name'], quantity, cdata)
-            # print(card)
-            cardpool.maindeck.append(card)
-        except KeyError:
-            c_name = card_name_by_id[card_id]
-            cdata = card_data_by_name[c_name]
-            card = Card(c_name, quantity, cdata)
+        name = card_name_by_id[card_id]
+        card = arena_legal_cards.contains(name)
+        cardpool.maindeck.append(Card(card.name, quantity, card.data))
 
     cardpool.to_file(path.join(data_folder, 'arena_cardpool.txt'))
 
+    # analyse the decklists and compare them to the cardpool
     total_output = ''
-
     for form in formats:
         # look for decklists in folders
         form = form.lower()
@@ -171,7 +110,6 @@ def analyse_and_summary(output_log, formats, app=None):
             )
 
             results = []
-
             for i, file in enumerate(decklist_files):
                 with open(file, 'r') as f:
                     decklist_string = f.read()
@@ -184,26 +122,28 @@ def analyse_and_summary(output_log, formats, app=None):
                         continue
                     found_card = cardpool.contains(card.name)
                     if found_card:
-                        # check quantity
+                        # if card is in the cardpool, check its quantity
                         if found_card.quantity < card.quantity:
-                            rarity = found_card.data['rarity'].capitalize()
+                            rarity = found_card.rarity.capitalize()
                             wc_needed[
                                 rarity] += card.quantity - found_card.quantity
                             cards_needed.maindeck.append(
                                 Card(card.name,
-                                     card.quantity - found_card.quantity)
+                                     card.quantity - found_card.quantity,
+                                     found_card.data)
                             )
                     else:
                         try:
-                            card_in_deck = card_deck.contains(card.name)
+                            card_in_deck = arena_legal_cards.contains(
+                                card.name)
                             if card_in_deck:
-                                rarity = card_in_deck.data[
-                                    'rarity'].capitalize()
+                                rarity = card_in_deck.rarity.capitalize()
                                 wc_needed[rarity] += card.quantity
                                 cards_needed.maindeck.append(
-                                    Card(card.name, card.quantity))
+                                    Card(card.name, card.quantity,
+                                         card_in_deck.data))
                         except KeyError:
-                            print(f'No rarity information for {card.name}')
+                            logging.info(f'No rarity information for {card.name}')
 
                 wc_balances = {}
                 for rarity in RARITIES:
@@ -218,8 +158,8 @@ def analyse_and_summary(output_log, formats, app=None):
                     None, name, id_,
                     deck.card_number_total - cards_needed.card_number_total,
                     deck.card_number_total,
-                    wc_needed['Mythic'], wc_needed['Rare'],
-                    wc_needed['Uncommon'], wc_needed['Common'],
+                    wc_balances['Mythic'], wc_balances['Rare'],
+                    wc_balances['Uncommon'], wc_balances['Common'],
                     cards_needed
                 ])
 
@@ -230,7 +170,8 @@ def analyse_and_summary(output_log, formats, app=None):
             for i, r in enumerate(results):
                 r[0] = i + 1
                 output += DECK_STRING.format(*r)
-                for card in r[9].maindeck:
+                # sort by Rarity (Mythic first)
+                for card in sorted(r[9].maindeck, key=lambda c: c.rarity_code):
                     output += f'   {card}\n'
                 output += '\n'
 
@@ -241,11 +182,15 @@ def analyse_and_summary(output_log, formats, app=None):
             with open(filename, 'w') as f:
                 f.write(output)
 
-            print(f'Summary for {form} saved as summary\summary_{form}.txt')
-
+            logging.info(f'Summary for {form} saved as summary\summary_{form}.txt')
             total_output += output
 
     return total_output
 
+
 if __name__ == '__main__':
-    analyse_and_summary()
+    from os import environ
+    username = environ['USERPROFILE']
+
+    OUTPUT_LOG = f'{username}\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\output_log.txt'
+    out = analyse_and_summary(OUTPUT_LOG, ['Standard'])

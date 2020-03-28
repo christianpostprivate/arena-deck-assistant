@@ -5,10 +5,11 @@ DECKLIST_SUMMARY = """
 Analysed decks: {1}
 
 Wild card inventory:
-  Common: {2}
-  Uncommon: {3}
-  Rare: {4}
   Mythic: {5}
+  Rare: {4}
+  Uncommon: {3}
+  Common: {2}
+  
 
 Decks ranked by # of Mythic and Rare wild cards missing:
 """
