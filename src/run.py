@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 TODO:
-- each deck download as a separate thread
+- Advanced settings with debug mode
+- give Card class a copy() method
+- in collect_arena_ids: fail check for parse_arena_log file operations
 """
 from os import path, environ
 import json
