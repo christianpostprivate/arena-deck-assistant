@@ -23,3 +23,6 @@
 ### Python
 1) Run **src/run.py** with Python. Make sure that the required modules are installed in your environment.
 2) The remaining process is the same as described under "Windows executable".
+
+## Currently used ressources
+* mtggoldfish.com
