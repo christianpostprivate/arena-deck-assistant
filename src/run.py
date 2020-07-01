@@ -5,7 +5,7 @@ TODO:
 - give Card class a copy() method
 - in collect_arena_ids: fail check for parse_arena_log file operations
 """
-from os import path, environ
+from os import getenv, path, environ
 import json
 import threading
 from collections import deque
@@ -20,9 +20,12 @@ from get_arena_ids import collect_arena_ids
 base_dir = path.dirname(path.abspath(__file__))
 data_folder = path.join(base_dir, '..', 'data')
 
-username = environ['USERPROFILE']
-DEFAULT_LOG_FOLDER = f'{username}\\AppData\\LocalLow\\Wizards Of The Coast\\MTGA\\'
-OUTPUT_LOG = DEFAULT_LOG_FOLDER + 'output_log.txt'
+appdata = path.dirname(getenv("APPDATA"))
+base = [appdata] if appdata else ["AppData"]
+components = base + ["LocalLow", "Wizards Of The Coast", "MTGA", "Player.log"]
+
+DEFAULT_LOG_FOLDER = path.join(*components[:-1])
+OUTPUT_LOG = path.join(*components)
 
 logfile = f'{path.basename(__file__).strip(".py")}.log'
 
@@ -56,8 +59,8 @@ class App:
           [sg.Text('Path to MTGA folder:             '),  # TODO: wow such lazy
            sg.InputText(self.settings['ARENA_DIRECTORY']),
            sg.FolderBrowse(initial_folder=self.settings['ARENA_DIRECTORY'])],
-          [sg.Text('Path to MTGA output_log.txt: '), sg.InputText(OUTPUT_LOG),
-           sg.FileBrowse(file_types=(("Text Files", "*.txt"),),
+          [sg.Text('Path to MTGA Player.log: '), sg.InputText(OUTPUT_LOG),
+           sg.FileBrowse(file_types=(("Text Files", "*.log"),),
                          initial_folder=DEFAULT_LOG_FOLDER)],
           [sg.Text('Formats to analyse (Select one or more): '),
            sg.Listbox(values=('Standard', 'Historic', 'Brawl'),
